@@ -31,14 +31,14 @@ process fastp {
 
     output:
     set sample_id, file("${sample_id}_R1.fastq.gz"), file("${sample_id}_R2.fastq.gz") into checked_fastq_ch
-    file("${sample}.fastp.json") into fastp_report_ch
-    file("${sample}.fastp.html")
+    file("${sample_id}.fastp.json") into fastp_report_ch
+    file("${sample_id}.fastp.html")
 
     script:
     """
     fastp --thread ${task.cpus} --in1 $r1 --out1 ${sample_id}_R1.fastq.gz \
         --in2 $r2 --out2 ${sample_id}_R2.fastq.gz -y \
-        --json ${sample}.fastp.json --html ${sample}.fastp.html
+        --json ${sample_id}.fastp.json --html ${sample_id}.fastp.html
     """
 }
 
