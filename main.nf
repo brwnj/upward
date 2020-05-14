@@ -2,10 +2,10 @@ params.fastqs
 params.fasta
 params.outdir
 // bed intervals of interest
-params.regions
+// params.regions
 
 outdir = file(params.outdir)
-regions = file(params.regions)
+// regions = file(params.regions)
 
 if( !params.fasta ) { exit 1, "--fasta is not defined" }
 // assumes .alt, .amb, .ann, .bwt, .pac, and .sa are present
@@ -91,13 +91,12 @@ process alignstats {
 
     input:
     set sample_id, file(bam), file(bai) from md_ch
-    file regions
 
     output:
     file("*.json")
 
     script:
     """
-    alignstats -P ${task.cpus} -i $bam -j bam -o ${sample_id}.alignstats.json -t $regions
+    alignstats -P ${task.cpus} -i $bam -j bam -o ${sample_id}.alignstats.json
     """
 }
