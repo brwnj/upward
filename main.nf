@@ -31,7 +31,7 @@ process fastp {
 
     output:
     set sample_id, file("${sample_id}_R1.fastq.gz"), file("${sample_id}_R2.fastq.gz") into checked_fastq_ch
-    file("${sample}.fastp.json") as fastp_report_ch
+    file("${sample}.fastp.json") into fastp_report_ch
     file("${sample}.fastp.html")
 
     script:
