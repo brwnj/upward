@@ -1,8 +1,11 @@
 params.fastqs
 params.fasta
 params.outdir
+// bed intervals of interest
+params.regions
 
 outdir = file(params.outdir)
+regions = file(params.regions)
 
 if( !params.fasta ) { exit 1, "--fasta is not defined" }
 // assumes .alt, .amb, .ann, .bwt, .pac, and .sa are present
@@ -18,12 +21,31 @@ Channel
     .set { fastq_ch }
 
 
-process map_reads {
-    container "brwnj/bwa-nf:v0.0.0"
-    cpus params.cpus
+// qc the fastqs
+process fastp {
+    publishDir path: "$outdir/json", pattern: "*.json"
+    publishDir path: "$outdir/html", pattern: "*.html"
 
     input:
     set sample_id, file(r1), file(r2) from fastq_ch
+
+    output:
+    set sample_id, file("${sample_id}_R1.fastq.gz"), file("${sample_id}_R2.fastq.gz") into checked_fastq_ch
+    file("${sample}.fastp.json") as fastp_report_ch
+    file("${sample}.fastp.html")
+
+    script:
+    """
+    fastp --thread ${task.cpus} --in1 $r1 --out1 ${sample_id}_R1.fastq.gz \
+        --in2 $r2 --out2 ${sample_id}_R2.fastq.gz -y \
+        --json ${sample}.fastp.json --html ${sample}.fastp.html
+    """
+}
+
+
+process bwamem {
+    input:
+    set sample_id, file(r1), file(r2) from checked_fastq_ch
     file(fasta)
     file(bwaidx) from bwaidx_ch
 
@@ -38,7 +60,8 @@ process map_reads {
     """
 }
 
-process mark_duplicates {
+
+process markduplicates {
     tag "$sample_id"
     publishDir path: "$outdir/alignments", overwrite: true
 
@@ -59,5 +82,22 @@ process mark_duplicates {
         --INPUT ${sample_id}.md.bam \
         --OUTPUT ${sample_id}.md.bam.bai \
         --TMP_DIR .
+    """
+}
+
+
+process alignstats {
+    publishDir path: "$outdir/json", pattern: "*.json"
+
+    input:
+    set sample_id, file(bam), file(bai) from md_ch
+    file regions
+
+    output:
+    file("*.json")
+
+    script:
+    """
+    alignstats -P ${task.cpus} -i $bam -j bam -o ${sample_id}.alignstats.json -t $regions
     """
 }
