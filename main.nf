@@ -17,7 +17,7 @@ Channel
 
 // emits [SRR493366, [/my/data/SRR493366_1.fastq, /my/data/SRR493366_2.fastq]]
 Channel
-    .fromFilePairs(params.fastqs)
+    .fromFilePairs(params.fastqs, flat: true)
     .set { fastq_ch }
 
 
