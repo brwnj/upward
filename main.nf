@@ -97,6 +97,6 @@ process alignstats {
 
     script:
     """
-    alignstats -P ${task.cpus} -i $bam -j bam -o ${sample_id}.alignstats.json
+    alignstats -C -P ${task.cpus} -i $bam -j bam -o ${sample_id}.alignstats.json
     """
 }
