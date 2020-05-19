@@ -92,7 +92,11 @@ process markduplicates {
 }
 
 
-(md_ch, indexcov_ch) = md_ch.into(2)
+(md_ch, indexcov_intermediate_ch) = md_ch.into(2)
+
+indexcov_intermediate_ch
+    .map { row -> row[2] }
+    .set { indexcov_ch }
 
 
 process alignstats {
@@ -116,7 +120,7 @@ process indexcov {
     label 'covviz'
 
     input:
-    set sample_id, file(bam), file(bai) from indexcov_ch.collect()
+    file(bai) from indexcov_ch.collect()
     file faidx
 
     output:
