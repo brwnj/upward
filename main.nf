@@ -1,6 +1,10 @@
 params.fastqs
 params.fasta
 params.outdir
+params.gff = false
+sexchroms = params.sexchroms ?: 'X,Y'
+sexchroms = sexchroms.replaceAll(" ", "")
+
 // bed intervals of interest
 // params.regions
 
@@ -10,6 +14,8 @@ outdir = file(params.outdir)
 if( !params.fasta ) { exit 1, "--fasta is not defined" }
 // assumes .alt, .amb, .ann, .bwt, .pac, and .sa are present
 fasta = file(params.fasta)
+faidx = file("${params.fasta}.fai")
+gff = params.gff ? file(params.gff) : params.gff
 
 Channel
     .value(file("${params.fasta}.{amb,ann,bwt,pac,sa}"))
@@ -86,6 +92,9 @@ process markduplicates {
 }
 
 
+(md_ch, indexcov_ch) = md_ch.into(2)
+
+
 process alignstats {
     publishDir path: "$outdir/json", pattern: "*.json"
 
@@ -98,5 +107,51 @@ process alignstats {
     script:
     """
     alignstats -C -P ${task.cpus} -i $bam -j bam -o ${sample_id}.alignstats.json
+    """
+}
+
+
+process indexcov {
+    publishDir path: "$outdir/reports/indexcov", mode: "copy"
+    label 'covviz'
+
+    input:
+    set sample_id, file(bam), file(bai) from indexcov_ch.collect()
+    file faidx
+
+    output:
+    file("upward*.png")
+    file("*.html")
+    file("upward*.bed.gz") into bed_ch
+    file("upward*.ped") into indexcov_ped_ch
+    file("upward*.roc") into roc_ch
+
+    script:
+    excludepatt = params.exclude ? "--excludepatt \"${params.exclude}\"" : ""
+    """
+    goleft indexcov --sex $sexchroms $excludepatt --directory upward --fai $faidx $bai
+    mv upward/* .
+    """
+}
+
+
+process covviz {
+    publishDir path: "$outdir/reports", mode: "copy", pattern: "*.html"
+    label 'covviz'
+
+    input:
+    file ped from indexcov_ped_ch
+    file bed from bed_ch
+    file gff
+
+    output:
+    file("covviz_report.html")
+
+    script:
+    gff_opt = params.gff ? "--gff ${gff}" : ""
+    """
+    covviz --min-samples ${params.minsamples} --sex-chroms ${params.sexchroms} --exclude '${params.exclude}' \
+        --z-threshold ${params.zthreshold} --distance-threshold ${params.distancethreshold} \
+        --slop ${params.slop} --ped ${ped} ${gff_opt} --skip-norm ${bed}
     """
 }
