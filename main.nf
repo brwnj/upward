@@ -93,7 +93,7 @@ process markduplicates {
 
 
 (md_ch, indexcov_intermediate_ch) = md_ch.into(2)
-
+// need the bam index only for indexcov/covviz
 indexcov_intermediate_ch
     .map { row -> row[2] }
     .set { indexcov_ch }
